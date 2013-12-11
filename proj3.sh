@@ -63,7 +63,7 @@ do
         mpirun -np ${cores[$k]} -hostfile nodes ./part_a ${sizes[$k]} >> tmp
     done
     #do math and come up with FLOPS numbers
-    awk -v procs="${cores[$k]}" -v size="${sizes[$k]}" '{sum+=$1} END {avg=sum/NR; flops=2*size^3; print procs,size,avg,flops,(flops/1000)/avg}' tmp >> results/isogranularity_part_a
+    awk -v procs="${cores[$k]}" -v size="${sizes[$k]}" '{sum+=$1} END {avg=sum/NR; flops=2*size^3; print procs,size,avg,flops,(flops/1000000)/avg}' tmp >> results/isogranularity_part_a
    rm -f tmp
 done 
 
@@ -100,7 +100,7 @@ set output "isogranularity_part_a.eps"
 plot "results/isogranularity_part_a" using 1:5 title "iso" with linespoints pointtype 6 lw 10
 __EOF
 
-mv *.png *.eps resutls/
+mv *.png *.eps results/
 
 #=========================Part B====================================#
 #=========================Part C====================================#
