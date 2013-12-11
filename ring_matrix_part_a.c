@@ -2,13 +2,21 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <unistd.h>
+#include <string.h>
 #include "timer.h"
+
 
 char* usage = "Usage: ./a.out <num_procs>\n where <num_procs> is the number of processors to use.  Using this option is not mandatory.\n";
 
+int     n;                          //size of the matrix we will use
+int     nc;                         //the "width" of each matrix column"
+double  *A, *B, *C, *Atemp;         //the matrices we'll use
+
+void calc_c(int,int);
+
 int main(int argc, char* argv[])
 {
-    /* Preprocessor Definitions */
+ /* Preprocessor Definitions */
 #define amat(I,J) A[I + n*J] 
 #define bmat(I,J) B[I + n*J]
 #define cmat(I,J) C[I + n*J]
@@ -16,23 +24,22 @@ int main(int argc, char* argv[])
 
     /* Variables */
     int     p;                          //total number of processors    
-    int     proc_num;                   //this processor's rank
-    int     n;                          //size of the matrix we will use
-    int     nc;                         //the "width" of each matrix column"
-    int     i,j,k;                      //counter variables
+    int     k;                          //this processor's rank
+    int     i,j;                        //counter variables
     double  start, finish;              //used for timing matrix computations
     char    hostname[20];               //hostname of this machine (for debug)
-    double  *A, *B, *C, *Atemp;         //the matrices we'll use
+    double *Amatrix, *Bmatrix, *Cmatrix;//actual matrices (used by process 0)
 
     /* Initializations */
     MPI_Init(NULL, NULL);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &proc_num);
+    MPI_Comm_size(MPI_COMM_WORLD, &p);
+    MPI_Comm_rank(MPI_COMM_WORLD, &k);
     hostname[19] = '\0';
     gethostname(hostname, 19);
 #   ifdef DEBUG
-    printf("Process %d of %d running on host %s\n", proc_num, p, hostname);
+    printf("Process %d of %d running on host %s\n", k, p, hostname);
 #   endif
+    //handle command line input
     if(argc == 1)           n = 1024;
     else if (argc == 2)     n = atoi(argv[1]);
     else
@@ -54,7 +61,24 @@ int main(int argc, char* argv[])
      * send it out to the worker processes
      */
 
-    k = proc_num; //just to follow the pseudocode easier
+    /* Root process: generate and distribute data */
+    if(k == 0)
+    {
+        Amatrix = (double *)malloc(n * n * sizeof(double));
+        Bmatrix = (double *)malloc(n * n * sizeof(double));
+        Cmatrix = (double *)malloc(n * n * sizeof(double));
+        
+        //Initialize data
+        for(i = 0; i < n*n; i++)
+        {
+            Amatrix[i] = 0;
+            Bmatrix[i] = 0;
+            Cmatrix[i] = 0;
+        }
+    }
+    //Now distribute.  Can do outside the root block
+    MPI_Scatter(Amatrix, n*nc, MPI_DOUBLE, A, n*nc, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(Bmatrix, n*nc, MPI_DOUBLE, B, n*nc, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     //pseudocode
     //Ck = Ck + Ak*Bkk
@@ -73,27 +97,34 @@ int main(int argc, char* argv[])
     
     //real code
     calc_c(k,k);
-    Atemp = Ak;
+    memcpy(Atemp,A,(n * nc * sizeof(double)));
     j = k;
+    int send_to = k+1;
+    int receive_from = k-1;
+    if (send_to == p) send_to = 0;
+    if (receive_from == -1) {
+        receive_from = p-1;
+    }
     for(i = 1; i < p-1; i++)
     {
-        j = mod(j+1, p);
-        
+        j = (j+1) % p;
         //send left
         if(k > 0)
         {
-            MPI_Send(Atemp, nc, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+            MPI_Send(Atemp, nc, MPI_DOUBLE, send_to, 0, MPI_COMM_WORLD);
         }
         //send right
         if(k < p-1)
         {
-            MPI_Receive(Atemp, nc, MPI_DOUBLE,k+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(Atemp, nc, MPI_DOUBLE,receive_from, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
         calc_c(j,k); 
     }
     MPI_Barrier(MPI_COMM_WORLD);    
     GET_TIME(finish);
     printf("%f\n", finish-start);
+
+    MPI_Gather(C, n*nc, MPI_DOUBLE, Cmatrix, n*nc, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     MPI_Finalize();
     return 0;
@@ -102,7 +133,7 @@ int main(int argc, char* argv[])
 /* Used to avoid having really messy code.  */
 void calc_c(int j2, int k2)
 {
-    //Ck = Ck + Ak*Bkk
+    //Ck = Ck + Ak*Bjk
     int sum;
     int x,y,z;
     for (x=0; x<n; x++) 
