@@ -16,10 +16,10 @@ declare -a sizes=(512 724 1024 1448 2048 2912)
 #fi
 
 #set up data files
-printf "np time speedup" > results/n1_results_part_a
-printf "np time speedup" > results/n2_results_part_a
-printf "np time speedup" > results/n3_results_part_a
-printf "np size time flops mflops/s" > results/isogranularity_part_a
+printf "np time speedup\n" > results/n1_results_part_a
+printf "np time speedup\n" > results/n2_results_part_a
+printf "np time speedup\n" > results/n3_results_part_a
+printf "np size time flops mflops/s\n" > results/isogranularity_part_a
 
 # Do data run for speedup numbers
 printf "Collecting data\n"
@@ -91,7 +91,7 @@ set term png size 800,600 font "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"
 set output "isogranularity_part_a.png"
 set title "Isogranularity"
 set xlabel "Number of Processes (p)"
-set ylabel "Millions of Floating-Point Operations per Second (mFLOPS/s)"
+set ylabel "Millions of Floating-Point Operations per Second (MFLOPS/s)"
 set autoscale
 plot "results/isogranularity_part_a" using 1:5 title "iso" with linespoints pointtype 6 lw 5
 
