@@ -5,6 +5,7 @@
 #include <string.h>
 #include "timer.h"
 
+#define VALUES
 
 char* usage = "Usage: ./a.out <num_procs>\n where <num_procs> is the number of processors to use.  Using this option is not mandatory.\n";
 
@@ -29,7 +30,6 @@ int main(int argc, char* argv[])
     double  start, finish;              //used for timing matrix computations
     char    hostname[20];               //hostname of this machine (for debug)
     double *Amatrix, *Bmatrix, *Cmatrix;//actual matrices (used by process 0)
-
     /* Initializations */
     MPI_Init(NULL, NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &p);
@@ -55,12 +55,6 @@ int main(int argc, char* argv[])
      
     srand(0);
 
-    /* 
-     * TODO:
-     * Have root process intialize all the data and then
-     * send it out to the worker processes
-     */
-
     /* Root process: generate and distribute data */
     if(k == 0)
     {
@@ -75,10 +69,38 @@ int main(int argc, char* argv[])
             Bmatrix[i] = 0;
             Cmatrix[i] = 0;
         }
+#ifdef VALUES //for correctness testing
+        if(k==0)
+        {
+            printf("A = B = \n");
+            for(i = 0; i < n; i++)
+            {
+                for(j = 0; j < n; j++)
+                {
+                    Amatrix[i+n*j] = i+j;
+                    Bmatrix[i+n*j] = i+j;
+                    printf("%f ", Amatrix[i+n*j]);
+                }
+                printf("\n");
+            }
+        }
+#endif
     }
     //Now distribute.  Can do outside the root block
     MPI_Scatter(Amatrix, n*nc, MPI_DOUBLE, A, n*nc, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Scatter(Bmatrix, n*nc, MPI_DOUBLE, B, n*nc, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+#ifdef VALUES
+    printf("Process %d has matrix Ak=\n", k);
+    for(i = 0; i < n; i++)
+    {
+        for (j = 0; j < nc; j++)
+        {
+            printf("%f ", A[i+n*j]);
+        }
+        printf("\n");
+    }
+#endif
 
     //pseudocode
     //Ck = Ck + Ak*Bkk
@@ -109,23 +131,41 @@ int main(int argc, char* argv[])
     {
         j = (j+1) % p;
         //send left
-        if(k > 0)
+        if(k%2)
         {
+            //send left
             MPI_Send(Atemp, nc, MPI_DOUBLE, send_to, 0, MPI_COMM_WORLD);
+            //send right
+            MPI_Recv(Atemp, nc, MPI_DOUBLE,receive_from, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
-        //send right
-        if(k < p-1)
+        else
         {
             MPI_Recv(Atemp, nc, MPI_DOUBLE,receive_from, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Send(Atemp, nc, MPI_DOUBLE, send_to, 0, MPI_COMM_WORLD);
         }
         calc_c(j,k); 
     }
-    MPI_Barrier(MPI_COMM_WORLD);    
     GET_TIME(finish);
-    printf("%f\n", finish-start);
+    MPI_Barrier(MPI_COMM_WORLD);    
+    
+    //output
+    if(k == 0) printf("%f\n", finish-start);
 
     MPI_Gather(C, n*nc, MPI_DOUBLE, Cmatrix, n*nc, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
+#ifdef VALUES
+    if(k == 0)
+    {
+        printf("\n\n C = \n");
+        for(i = 0; i < n; i++)
+        {
+            for(j = 0; j < n; j++)
+            {
+                printf("%f ", C[i+n*j]);
+            }
+            printf("\n");
+        }
+    }
+#endif
     MPI_Finalize();
     return 0;
 } /* main */
