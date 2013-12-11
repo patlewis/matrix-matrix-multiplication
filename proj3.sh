@@ -25,7 +25,7 @@ printf "np size time flops mflops/s\n" > results/isogranularity_part_a
 printf "Collecting data\n"
 for n in $n1 $n2 $n3
 do
-    printf "%d\n" $n #for debug
+    printf "\n%d--" $n #for debug
     for p in "${cores[@]}"   #different processor numbers
     do
         printf "%d" $p #for debug
@@ -56,7 +56,7 @@ printf "Collecting data for isogranularity\n"
 numcores=${#cores[@]}
 for k in {0..5}
 do
-    printf "%d cores" ${cores[$k]}
+    printf "\n%d cores" ${cores[$k]}
     for i in {1..100}
     do
 	printf "."
