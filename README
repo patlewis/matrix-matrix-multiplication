@@ -1,0 +1,26 @@
+If you'd like to compile the code, run it, and look at the data
+the way we've done it, then just run "proj3.sh."  It's worked
+for me before, and it will again.  If you do decide to use it
+and it doesn't work , just email me at "patl1@vt.edu" and I'll 
+fix it.
+
+If you don't want to run the script, then you can compile 
+everything like so:
+
+mpicc -o part_a ring_matrix_part_a.c
+mpicc -o part_b -fopenmp ring_martrix_part_b.c
+mpicc -o part_c ring_matrix_part_c.c
+
+The programs should run with the following:
+
+mpirun -np <num_processors> -hostfile <your_hostfile> ./part_a <matrix size>
+mpirun -np <num_processors> -hostfile <your_hostfile> ./part_b <matrix size> <num_threads>
+mpirun -np <num_processors> -hostfile <your_hostfile> ./part_c <matrix size>
+
+The field <matrix size> should be a number that is divisible by 
+<num_processors>.  
+
+Again, if you have any questions, please let me know 
+(Pat Lewis, patl1@vt.edu) and I'll clear everything up.
+
+Happy grading!
