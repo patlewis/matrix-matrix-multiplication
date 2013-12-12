@@ -10,10 +10,10 @@ declare -a cores=(1 2 4 8 16 32)
 declare -a sizes=(512 724 1024 1448 2048 2912)
 
 #compile and then check for errors
-#mpicc -o part_a -g -Wall -Werror ring_matrix_part_a.c
-#if [ $? -ne 0 ]; then
-#    return
-#fi
+mpicc -o part_a -g -Wall -Werror ring_matrix_part_a.c
+if [ $? -ne 0 ]; then
+    return
+fi
 
 #set up data files
 printf "np time speedup\n" > results/n1_results_part_a
@@ -28,7 +28,7 @@ do
     printf "\n%d--" $n #for debug
     for p in "${cores[@]}"   #different processor numbers
     do
-        printf "%d" $p #for debug
+        printf "\n%d" $p #for debug
         for i in {1..100}       #run multiple times for good data
         do
             mpirun -np $p -hostfile nodes ./part_a $n >> tmp
@@ -52,7 +52,7 @@ do
 done
 
 # Do data runs for isogranularity
-printf "Collecting data for isogranularity\n"
+printf "\nCollecting data for isogranularity\n"
 numcores=${#cores[@]}
 for k in {0..5}
 do
@@ -76,13 +76,12 @@ set title "Speedup vs. Number of Processes"
 set xlabel "Processes (p)"
 set ylabel "Speedup Factor"
 set autoscale
+set key left top
 plot "results/n1_results_part_a" using 1:3 title "n = ${n1}" with linespoints pointtype 6 lw 5, "results/n2_results_part_a" using 1:3 title "n = ${n2}" with linespoints pointtype 6 lw 5, "results/n3_results_part_a" using 1:3 title "n = ${n3}" with linespoints pointtype 6 lw 5
 
 set term postscript eps size 8,6 font "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf, 30" enhanced color
 set output "speedup_plot_part_a.eps"
-plot "results/n1_results_part_a" using 1:3 title "n = ${n1}" with linespoints pointtype 6 lw 10
-plot "results/n2_results_part_a" using 1:3 title "n = ${n2}" with linespoints pointtype 6 lw 10
-plot "results/n3_results_part_a" using 1:3 title "n = ${n3}" with linespoints pointtype 6 lw 10
+plot "results/n1_results_part_a" using 1:3 title "n = ${n1}" with linespoints pointtype 6 lw 10, "results/n2_results_part_a" using 1:3 title "n = ${n2}" with linespoints pointtype 6 lw 10, "results/n3_results_part_a" using 1:3 title "n = ${n3}" with linespoints pointtype 6 lw 10
 __EOF
 
 # Make the isogranularity plot
@@ -93,6 +92,7 @@ set title "Isogranularity"
 set xlabel "Number of Processes (p)"
 set ylabel "Millions of Floating-Point Operations per Second (MFLOPS/s)"
 set autoscale
+set key left top
 plot "results/isogranularity_part_a" using 1:5 title "iso" with linespoints pointtype 6 lw 5
 
 set term postscript eps size 8,6 font "/usr/share/fonts/dejavu/DejavuSans-Bold.ttf, 30" enhanced color
