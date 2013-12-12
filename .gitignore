@@ -1,4 +1,4 @@
-# Object files
+p# Object files
 *.o
 *.ko
 
@@ -21,3 +21,9 @@
 *.txt
 *.png
 *.eps
+test
+*~
+tmp
+nodes
+part_a
+results

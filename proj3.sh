@@ -2,9 +2,10 @@
 
 #=========================Part A====================================#
 mkdir -p results
-n1=512
-n2=1024
-n3=4096
+n0=128
+n1=256
+n2=512
+n3=1024
 
 declare -a cores=(1 2 4 8 16 32)
 declare -a sizes=(512 724 1024 1448 2048 2912)
@@ -16,6 +17,7 @@ if [ $? -ne 0 ]; then
 fi
 
 #set up data files
+printf "np time speedup\n" > results/n0_results_part_a
 printf "np time speedup\n" > results/n1_results_part_a
 printf "np time speedup\n" > results/n2_results_part_a
 printf "np time speedup\n" > results/n3_results_part_a
@@ -23,13 +25,13 @@ printf "np size time flops mflops/s\n" > results/isogranularity_part_a
 
 # Do data run for speedup numbers
 printf "Collecting data\n"
-for n in $n1 $n2 $n3
+for n in $n0 $n1 $n2 $n3
 do
     printf "\n%d--" $n #for debug
     for p in "${cores[@]}"   #different processor numbers
     do
         printf "\n%d" $p #for debug
-        for i in {1..100}       #run multiple times for good data
+        for i in {1..10}       #run multiple times for good data
         do
             mpirun -np $p -hostfile nodes ./part_a $n >> tmp
             printf "." #for debug
@@ -39,12 +41,14 @@ do
             spdf=$(awk '{sum+=$1} END {avg=sum/NR; print avg}' tmp)
         fi
         #do speedup calculations, send to correct files
-        if [ "$n" -eq "$n1" ]; then
-            awk -v fac="$spdf" -v procs="$p" '{sum+=$1} END {avg=sum/NR; print procs,avg,avg/fac}' tmp >> results/n1_results_part_a 
+        if [ "$n" -eq "$n0" ]; then
+            awk -v fac="$spdf" -v procs="$p" '{sum+=$1} END {avg=sum/NR; print procs,avg,fac/avg}' tmp >> results/n0_results_part_a 
+        elif [ "$n" -eq "$n1" ]; then
+            awk -v fac="$spdf" -v procs="$p" '{sum+=$1} END {avg=sum/NR; print procs,avg,fac/avg}' tmp >> results/n1_results_part_a 
         elif [ "$n" -eq "$n2" ]; then
-            awk -v fac="$spdf" -v procs="$p" '{sum+=$1} END {avg=sum/NR; print procs,avg,avg/fac}' tmp >> results/n2_results_part_a 
+            awk -v fac="$spdf" -v procs="$p" '{sum+=$1} END {avg=sum/NR; print procs,avg,fac/avg}' tmp >> results/n2_results_part_a 
         elif [ "$n" -eq "$n3" ]; then
-            awk -v fac="$spdf" -v procs="$p" '{sum+=$1} END {avg=sum/NR; print procs,avg,avg/fac}' tmp >> results/n3_results_part_a 
+            awk -v fac="$spdf" -v procs="$p" '{sum+=$1} END {avg=sum/NR; print procs,avg,fac/avg}' tmp >> results/n3_results_part_a 
         fi
         #remove temp file for the next iteration
         rm -f tmp
@@ -57,7 +61,7 @@ numcores=${#cores[@]}
 for k in {0..5}
 do
     printf "\n%d cores" ${cores[$k]}
-    for i in {1..100}
+    for i in {1..10}
     do
 	printf "."
         mpirun -np ${cores[$k]} -hostfile nodes ./part_a ${sizes[$k]} >> tmp
@@ -67,7 +71,7 @@ do
    rm -f tmp
 done 
 
-printf "Making plots\n"
+printf "\n\nMaking plots\n"
 # Make a plot of speedup
 cat << __EOF | gnuplot
 set term png size 800,600 font "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"
@@ -77,11 +81,12 @@ set xlabel "Processes (p)"
 set ylabel "Speedup Factor"
 set autoscale
 set key left top
-plot "results/n1_results_part_a" using 1:3 title "n = ${n1}" with linespoints pointtype 6 lw 5, "results/n2_results_part_a" using 1:3 title "n = ${n2}" with linespoints pointtype 6 lw 5, "results/n3_results_part_a" using 1:3 title "n = ${n3}" with linespoints pointtype 6 lw 5
+set grid xtics ytics
+plot "results/n0_results_part_a" using 1:3 title "n = ${n0}" with linespoints pointtype 6 lw 5, "results/n1_results_part_a" using 1:3 title "n = ${n1}" with linespoints pointtype 6 lw 5, "results/n2_results_part_a" using 1:3 title "n = ${n2}" with linespoints pointtype 6 lw 5, "results/n3_results_part_a" using 1:3 title "n = ${n3}" with linespoints pointtype 6 lw 5
 
 set term postscript eps size 8,6 font "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf, 30" enhanced color
 set output "speedup_plot_part_a.eps"
-plot "results/n1_results_part_a" using 1:3 title "n = ${n1}" with linespoints pointtype 6 lw 10, "results/n2_results_part_a" using 1:3 title "n = ${n2}" with linespoints pointtype 6 lw 10, "results/n3_results_part_a" using 1:3 title "n = ${n3}" with linespoints pointtype 6 lw 10
+plot "results/n0_results_part_a" using 1:3 title "n = ${n0}" with linespoints pointtype 6 lw 5, "results/n1_results_part_a" using 1:3 title "n = ${n1}" with linespoints pointtype 6 lw 10, "results/n2_results_part_a" using 1:3 title "n = ${n2}" with linespoints pointtype 6 lw 10, "results/n3_results_part_a" using 1:3 title "n = ${n3}" with linespoints pointtype 6 lw 10
 __EOF
 
 # Make the isogranularity plot
@@ -93,6 +98,7 @@ set xlabel "Number of Processes (p)"
 set ylabel "Millions of Floating-Point Operations per Second (MFLOPS/s)"
 set autoscale
 set key left top
+set grid xtics ytics
 plot "results/isogranularity_part_a" using 1:5 title "iso" with linespoints pointtype 6 lw 5
 
 set term postscript eps size 8,6 font "/usr/share/fonts/dejavu/DejavuSans-Bold.ttf, 30" enhanced color
