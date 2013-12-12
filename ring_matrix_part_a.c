@@ -163,6 +163,7 @@ void calc_c(int j2, int k2)
 {
    //Ck = Ck + Ak*Bjk
    int x,y,z;
+   int sum;
    for (x=0; x<n; x++)
    {
        for (y=0; y<nc; y++)
@@ -170,9 +171,9 @@ void calc_c(int j2, int k2)
       
            for (z=0; z<nc; z++)
            {
-               cmat(x,y) = cmat(x,y) + atempmat(x,z) * bmat(z+j2*nc,y);
+               sum = sum + atempmat(x,z) * bmat(z+j2*nc,y);
            }
-         
+           cmat(x,y) = sum;
        }
    }
 }
